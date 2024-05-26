@@ -66,7 +66,8 @@ class EqualWeightPortfolio:
         """
         TODO: Complete Task 1 Below
         """
-
+        for column in assets:
+            self.portfolio_weights[column] = 1/len(assets)
         """
         TODO: Complete Task 1 Above
         """
@@ -117,7 +118,12 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Below
         """
-
+        for i in range(self.lookback + 1, len(df)):
+            R_n = df_returns.copy()[assets].iloc[i - self.lookback : i]
+            mot = R_n.std().rdiv(1).sum()
+            for column in assets:
+                return_asset = df_returns.copy()[column].iloc[i-self.lookback:i]
+                self.portfolio_weights.loc[df.index[i],column] = 1/return_asset.std()/mot
         """
         TODO: Complete Task 2 Above
         """
@@ -193,7 +199,12 @@ class MeanVariancePortfolio:
                 # Sample Code: Initialize Decision w and the Objective
                 # NOTE: You can modify the following code
                 w = model.addMVar(n, name="w", ub=1)
-                model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+                model.setObjective(w@mu-w@Sigma@w*(1/2)*gamma, gp.GRB.MAXIMIZE)
+                # model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+
+                # Add model constraints
+                model.addConstrs((w[i].item()>=0 for i in range(n)),"c0")
+                model.addConstr(w.sum() == 1,"c1")
 
                 """
                 TODO: Complete Task 3 Below
@@ -401,6 +412,8 @@ class AssignmentJudge:
 
     def check_answer_rp(self, rp_dataframe):
         answer_dataframe = pd.read_pickle(self.rp_path)
+        # print(answer_dataframe)
+        # print(rp_dataframe)
         if self.compare_dataframe(answer_dataframe, rp_dataframe):
             print("Problem 2 Complete - Get 10 Points")
             return 10
