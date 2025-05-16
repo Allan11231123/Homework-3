@@ -69,7 +69,45 @@ class MyPortfolio:
         """
         TODO: Complete Task 4 Below
         """
-
+        # Set excluded asset weight to 0
+        self.portfolio_weights[self.exclude] = 0
+        
+        # Need sufficient lookback data before calculating weights
+        for i in range(self.lookback, len(self.price)):
+            # Get price and return data for lookback window
+            returns_window = self.returns[assets].iloc[i-self.lookback:i]
+            price_window = self.price[assets].iloc[i-self.lookback:i]
+            
+            # Calculate key factors:
+            
+            # 1. Momentum signals (shorter and longer timeframes)
+            momentum_short = returns_window.iloc[-20:].mean()  # ~1 month momentum
+            momentum_medium = returns_window.iloc[-60:].mean()  # ~3 month momentum
+            
+            # 2. Volatility measurement (prefer lower volatility)
+            volatility = returns_window.std() * np.sqrt(252)  # Annualized volatility
+            
+            # 3. Trend following indicator (price relative to moving averages)
+            ma_50 = price_window.rolling(window=min(50, len(price_window))).mean().iloc[-1]
+            price_latest = price_window.iloc[-1]
+            trend_signal = (price_latest > ma_50).astype(int)
+            
+            # Combine factors into a composite score
+            # Higher momentum, lower volatility, and positive trends are preferred
+            composite_score = (
+                0.4 * momentum_short +
+                0.3 * momentum_medium +
+                0.3 * (1 / volatility) * trend_signal
+            )
+            
+            # Handle any negative scores or NaN values
+            composite_score = composite_score.fillna(0).clip(lower=0.0001)
+            
+            # Normalize to ensure weights sum to 1
+            weights = composite_score / composite_score.sum()
+            
+            # Assign weights for this time period
+            self.portfolio_weights.loc[self.price.index[i], assets] = weights
         """
         TODO: Complete Task 4 Above
         """
